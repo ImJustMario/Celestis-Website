@@ -2,7 +2,7 @@
 
 @layer base {
   body {
-    background: linear-gradient(to bottom right, rgb(15 23 42), rgb(30 58 138), rgb(15 23 42));
+    background: linear-gradient(to bottom right, rgb(43, 54, 78), rgb(104, 138, 211), rgb(45, 56, 82));
     min-height: 100vh;
   }
 }
