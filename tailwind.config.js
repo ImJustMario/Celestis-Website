@@ -8,11 +8,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        'celestis-blue': {
-          light: '#60a5fa',
-          DEFAULT: '#3b82f6',
-          dark: '#1e40af',
+        surface: {
+          DEFAULT: '#F7F7F5',
+          card: '#FFFFFF',
         },
+        ink: {
+          DEFAULT: '#1A1A1A',
+          secondary: '#6B6B6B',
+          muted: '#9A9A9A',
+        },
+        accent: {
+          DEFAULT: '#E8573D',
+          hover: '#D14A32',
+          light: '#FDEAE6',
+        },
+        line: '#E8E8E6',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      boxShadow: {
+        soft: '0 2px 16px 0 rgba(0,0,0,0.04)',
+        card: '0 4px 24px 0 rgba(0,0,0,0.06)',
+        lift: '0 8px 32px 0 rgba(0,0,0,0.08)',
       },
     },
   },

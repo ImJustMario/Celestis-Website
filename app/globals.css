@@ -1,8 +1,19 @@
 @import "tailwindcss";
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    background: linear-gradient(to bottom right, rgb(43, 54, 78), rgb(104, 138, 211), rgb(45, 56, 82));
+    background-color: #F7F7F5;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: #E8573D;
+    color: #fff;
   }
 }
