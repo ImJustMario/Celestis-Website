@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 400" width="560" height="400">
+  <defs>
+    <linearGradient id="d1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#172044"/>
+    </linearGradient>
+  </defs>
+  <rect width="560" height="400" fill="url(#d1)"/>
+  <!-- bars -->
+  <rect x="80" y="240" width="40" height="110" rx="4" fill="#1e40af" opacity=".5"/>
+  <rect x="140" y="200" width="40" height="150" rx="4" fill="#1e40af" opacity=".55"/>
+  <rect x="200" y="260" width="40" height="90" rx="4" fill="#1e40af" opacity=".45"/>
+  <rect x="260" y="160" width="40" height="190" rx="4" fill="#3b82f6" opacity=".55"/>
+  <rect x="320" y="180" width="40" height="170" rx="4" fill="#1e40af" opacity=".5"/>
+  <rect x="380" y="120" width="40" height="230" rx="4" fill="#3b82f6" opacity=".6"/>
+  <rect x="440" y="210" width="40" height="140" rx="4" fill="#1e40af" opacity=".48"/>
+  <!-- bar highlights -->
+  <rect x="80" y="240" width="40" height="4" rx="2" fill="#60a5fa" opacity=".6"/>
+  <rect x="140" y="200" width="40" height="4" rx="2" fill="#60a5fa" opacity=".6"/>
+  <rect x="200" y="260" width="40" height="4" rx="2" fill="#60a5fa" opacity=".6"/>
+  <rect x="260" y="160" width="40" height="4" rx="2" fill="#93c5fd" opacity=".7"/>
+  <rect x="320" y="180" width="40" height="4" rx="2" fill="#60a5fa" opacity=".6"/>
+  <rect x="380" y="120" width="40" height="4" rx="2" fill="#93c5fd" opacity=".7"/>
+  <rect x="440" y="210" width="40" height="4" rx="2" fill="#60a5fa" opacity=".6"/>
+  <!-- trend line -->
+  <path d="M100 235 L160 195 L220 255 L280 155 L340 175 L400 115 L460 205"
+        fill="none" stroke="#93c5fd" stroke-width="1.5" opacity=".5" stroke-dasharray="4 3"/>
+  <!-- baseline -->
+  <line x1="60" y1="350" x2="500" y2="350" stroke="#334155" stroke-width=".8"/>
+  <!-- axis ticks -->
+  <g stroke="#475569" stroke-width=".5" opacity=".6">
+    <line x1="100" y1="350" x2="100" y2="355"/>
+    <line x1="160" y1="350" x2="160" y2="355"/>
+    <line x1="220" y1="350" x2="220" y2="355"/>
+    <line x1="280" y1="350" x2="280" y2="355"/>
+    <line x1="340" y1="350" x2="340" y2="355"/>
+    <line x1="400" y1="350" x2="400" y2="355"/>
+    <line x1="460" y1="350" x2="460" y2="355"/>
+  </g>
+</svg>
