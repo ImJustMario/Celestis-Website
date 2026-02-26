@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useRef } from 'react'
 import { GlobeIcon, SignalIcon, AdjustmentsIcon, ChartBarIcon, UserIcon } from './components/Icons'
 import Gallery from './components/Gallery'
+import Particles from './components/Particles'
 
 export default function Home() {
   const transitionRef = useRef<HTMLDivElement | null>(null)
@@ -52,8 +53,9 @@ export default function Home() {
               scale: firstScreenScale,
               willChange: 'transform, filter, opacity'
             }}
-            className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-[#2A2A2A]"
+            className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-gradient-to-br from-[#AFD5F0] via-[#A3C6E0] to-[#7C9FB9]"
           >
+            <Particles />
             <div className="text-center max-w-3xl px-4">
               <motion.div
                 initial={{ scale: 0.94, opacity: 0 }}
