@@ -37,8 +37,8 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       {/* ── Hero + scroll transition ── */}
-      <section id="hero" ref={transitionRef} className="relative h-[240dvh] md:h-[210dvh]">
-        <div className="sticky top-0 h-[100dvh] overflow-hidden">
+      <section id="hero" ref={transitionRef} className="relative h-[240lvh] md:h-[210lvh]">
+        <div className="sticky top-0 h-[100lvh] overflow-hidden">
           <motion.div
             style={{ opacity: depthOverlayOpacity }}
             className="absolute inset-0 bg-black pointer-events-none"
