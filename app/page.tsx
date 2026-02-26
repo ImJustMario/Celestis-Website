@@ -22,7 +22,7 @@ export default function Home() {
     mass: 0.25
   })
 
-  const firstScreenY = useTransform(progress, [0, 1], ['0%', '-20%'])
+  const firstScreenY = useTransform(progress, [0, 1], ['0%', '-34%'])
   const firstScreenBlur = useTransform(progress, [0, 1], ['0px', '16px'])
   const firstScreenOpacity = useTransform(progress, [0, 0.7], [1, 0])
   const firstScreenScale = useTransform(progress, [0, 1], [1, 0.96])
@@ -37,8 +37,8 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       {/* ── Hero + scroll transition ── */}
-      <section id="hero" ref={transitionRef} className="relative h-[240lvh] md:h-[210lvh]">
-        <div className="sticky top-0 h-[100lvh] overflow-hidden">
+      <section id="hero" ref={transitionRef} className="relative h-[240dvh] md:h-[210dvh]">
+        <div className="sticky top-0 h-dvh pb-[env(safe-area-inset-bottom)] overflow-hidden">
           <motion.div
             style={{ opacity: depthOverlayOpacity }}
             className="absolute inset-0 bg-black pointer-events-none"
