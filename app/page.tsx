@@ -23,7 +23,7 @@ export default function Home() {
   })
 
   const firstScreenY = useTransform(progress, [0, 1], ['0%', '-34%'])
-  const firstScreenBlur = useTransform(progress, [0, 1], ['0px', '16px'])
+  const firstScreenBlur = useTransform(progress, [0, 1], ['0px', '32px'])
   const firstScreenOpacity = useTransform(progress, [0, 0.7], [1, 0])
   const firstScreenScale = useTransform(progress, [0, 1], [1, 0.96])
 
@@ -41,7 +41,7 @@ export default function Home() {
         <div className="sticky top-0 h-dvh pb-[env(safe-area-inset-bottom)] overflow-hidden">
           <motion.div
             style={{ opacity: depthOverlayOpacity }}
-            className="absolute inset-0 bg-black pointer-events-none"
+            className="absolute inset-0 pointer-events-none"
           />
 
           {/* First screen — dark editorial hero */}
@@ -123,17 +123,17 @@ export default function Home() {
             className="absolute inset-0 z-20 flex items-center justify-center px-4"
           >
             <div className="w-full max-w-3xl min-h-[56svh] md:min-h-[58vh] max-h-[86svh] md:max-h-none overflow-hidden p-6 sm:p-8 md:p-12 flex flex-col justify-center">
-              <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-5 md:mb-6 text-ink tracking-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-5 md:mb-6 text-[#F8FAFC] tracking-tight">
                 Project Description
               </h2>
-              <p className="text-sm sm:text-base md:text-lg text-ink-secondary leading-relaxed mb-4 md:mb-5">
+              <p className="text-sm sm:text-base md:text-lg text-[#E2E8F0] leading-relaxed mb-4 md:mb-5">
                 Celestis is an innovative CanSat mission designed to collect atmospheric data during descent with stable telemetry and high-quality sensing.
               </p>
-              <p className="text-sm sm:text-base md:text-lg text-ink-secondary leading-relaxed mb-6 md:mb-8">
+              <p className="text-sm sm:text-base md:text-lg text-[#E2E8F0] leading-relaxed mb-6 md:mb-8">
                 Scroll-driven transitions create a natural depth effect: the initial screen softly moves and blurs while this panel rises from below in sync with your gesture.
               </p>
               <Link href="/data" className="inline-block">
-                <button className="bg-black hover:bg-black/90 text-white font-semibold py-3 px-7 md:py-3.5 md:px-8 rounded-full text-sm sm:text-base transition-all duration-300 shadow-soft hover:shadow-lift transform hover:scale-[1.02] cursor-pointer">
+                <button className="bg-[#0E7490] hover:bg-[#155E75] text-white font-semibold py-3 px-7 md:py-3.5 md:px-8 rounded-full text-sm sm:text-base transition-all duration-300 shadow-soft hover:shadow-lift transform hover:scale-[1.02] cursor-pointer">
                   View Collected Data
                 </button>
               </Link>
@@ -143,7 +143,7 @@ export default function Home() {
       </section>
 
       {/* ── Mission Goals ── */}
-      <section id="mission" className="py-20 md:py-32 px-4">
+      <section id="mission" className="py-20 md:py-32 px-4 border-t border-line border-white">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
@@ -151,10 +151,10 @@ export default function Home() {
             transition={{ duration: 0.7 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-center text-ink tracking-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-center text-white tracking-tight">
               Mission Goals
             </h2>
-            <p className="text-center text-ink-secondary mb-12 md:mb-16 max-w-xl mx-auto">
+            <p className="text-center text-slate-100 mb-12 md:mb-16 max-w-xl mx-auto">
               Four core objectives driving Celestis from concept to descent.
             </p>
             <div className="grid md:grid-cols-2 gap-5 md:gap-6">
@@ -162,22 +162,22 @@ export default function Home() {
                 {
                   title: "Atmospheric Data Collection",
                   description: "Gather comprehensive data on temperature, pressure, humidity, and altitude throughout the descent.",
-                  icon: <GlobeIcon className="w-6 h-6 text-accent" />
+                  icon: <GlobeIcon className="w-6 h-6 text-white" />
                 },
                 {
                   title: "Real-time Telemetry",
                   description: "Establish reliable communication systems for real-time data transmission to ground stations.",
-                  icon: <SignalIcon className="w-6 h-6 text-accent" />
+                  icon: <SignalIcon className="w-6 h-6 text-white" />
                 },
                 {
                   title: "Stable Descent Control",
                   description: "Implement effective stabilization and descent control mechanisms for accurate data collection.",
-                  icon: <AdjustmentsIcon className="w-6 h-6 text-accent" />
+                  icon: <AdjustmentsIcon className="w-6 h-6 text-white" />
                 },
                 {
                   title: "Data Analysis & Visualization",
                   description: "Process and visualize collected data to derive meaningful insights about atmospheric conditions.",
-                  icon: <ChartBarIcon className="w-6 h-6 text-accent" />
+                  icon: <ChartBarIcon className="w-6 h-6 text-white" />
                 }
               ].map((goal, index) => (
                 <motion.div
@@ -187,15 +187,15 @@ export default function Home() {
                   transition={{ duration: 0.5, delay: index * 0.08 }}
                   viewport={{ once: true }}
                   whileHover={{ y: -4 }}
-                  className="bg-surface-card rounded-2xl p-6 md:p-8 shadow-soft hover:shadow-card border border-line transition-all duration-300"
+                  className="bg-surface-card rounded-2xl p-6 md:p-8 shadow-soft hover:shadow-card border border-line border-white transition-all duration-300"
                 >
-                  <div className="w-11 h-11 mb-5 rounded-xl bg-accent-light flex items-center justify-center">
+                  <div className="w-11 h-11 mb-5 rounded-xl flex items-center justify-center">
                     {goal.icon}
                   </div>
-                  <h3 className="text-lg md:text-xl font-semibold mb-3 text-ink">
+                  <h3 className="text-lg md:text-xl font-semibold mb-3 text-white">
                     {goal.title}
                   </h3>
-                  <p className="text-sm md:text-base text-ink-secondary leading-relaxed">
+                  <p className="text-sm md:text-base text-white leading-relaxed">
                     {goal.description}
                   </p>
                 </motion.div>
@@ -214,10 +214,10 @@ export default function Home() {
             transition={{ duration: 0.7 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-center text-ink tracking-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-center text-white tracking-tight">
               Gallery
             </h2>
-            <p className="text-center text-ink-secondary mb-12 md:mb-16 max-w-xl mx-auto">
+            <p className="text-center text-white mb-12 md:mb-16 max-w-xl mx-auto">
               Behind the scenes of our mission development.
             </p>
             <Gallery />
@@ -234,10 +234,10 @@ export default function Home() {
             transition={{ duration: 0.7 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-center text-ink tracking-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-center text-white tracking-tight">
               Our Team
             </h2>
-            <p className="text-center text-ink-secondary mb-12 md:mb-16 max-w-xl mx-auto">
+            <p className="text-center text-slate-100 mb-12 md:mb-16 max-w-xl mx-auto">
               Four minds, one mission.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
@@ -254,15 +254,15 @@ export default function Home() {
                   transition={{ duration: 0.5, delay: index * 0.08 }}
                   viewport={{ once: true }}
                   whileHover={{ y: -4 }}
-                  className="bg-surface-card rounded-2xl p-6 md:p-8 shadow-soft hover:shadow-card border border-line text-center transition-all duration-300"
+                  className="bg-surface-card rounded-2xl p-6 md:p-8 shadow-soft hover:shadow-card border border-line border-white text-center transition-all duration-300"
                 >
-                  <div className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-5 rounded-full bg-[#1A1A1A] flex items-center justify-center">
-                    <UserIcon className="w-9 h-9 md:w-11 md:h-11 text-white/70" />
+                  <div className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-5 rounded-full bg-white flex items-center justify-center">
+                    <UserIcon className="w-9 h-9 md:w-11 md:h-11 text-black/70" />
                   </div>
-                  <h3 className="text-base md:text-lg font-semibold mb-1 text-ink">
+                  <h3 className="text-white md:text-lg font-semibold mb-1 text-ink">
                     {member.name}
                   </h3>
-                  <p className="text-ink-muted text-xs md:text-sm">
+                  <p className="text-slate-200 text-xs md:text-sm">
                     {member.role}
                   </p>
                 </motion.div>
@@ -273,8 +273,8 @@ export default function Home() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="py-10 text-center border-t border-line">
-        <p className="text-ink-muted text-sm">
+      <footer className="py-10 text-center border-t border-line border-white">
+        <p className="text-slate-200 text-sm">
           Celestis CanSat Project. All rights reserved.
         </p>
       </footer>
