@@ -4,7 +4,7 @@ import { motion, useScroll, useSpring, useTransform } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRef } from 'react'
-import { GlobeIcon, SignalIcon, AdjustmentsIcon, ChartBarIcon, UserIcon } from './components/Icons'
+import { GlobeIcon, SignalIcon, AdjustmentsIcon, ChartBarIcon } from './components/Icons'
 import Gallery from './components/Gallery'
 import Particles from './components/Particles'
 
@@ -130,7 +130,7 @@ export default function Home() {
                 Celestis is an innovative CanSat mission designed to collect atmospheric data during descent with stable telemetry and high-quality sensing.
               </p>
               <p className="text-sm sm:text-base md:text-lg text-[#E2E8F0] leading-relaxed mb-6 md:mb-8">
-                Scroll-driven transitions create a natural depth effect: the initial screen softly moves and blurs while this panel rises from below in sync with your gesture.
+                To-write
               </p>
               <Link href="/data" className="inline-block">
                 <button className="bg-[#0E7490] hover:bg-[#155E75] text-white font-semibold py-3 px-7 md:py-3.5 md:px-8 rounded-full text-sm sm:text-base transition-all duration-300 shadow-soft hover:shadow-lift transform hover:scale-[1.02] cursor-pointer">
@@ -242,10 +242,30 @@ export default function Home() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
               {[
-                { name: "Project Lead", role: "Management & Systems Integration" },
-                { name: "Hardware Engineer", role: "Electronics & Sensor Design" },
-                { name: "Software Developer", role: "Data Processing & Visualization" },
-                { name: "Comms Lead", role: "Telemetry & Ground Station" }
+                {
+                  image: '/logo_transparent.png',
+                  name: 'Laura Sánchez',
+                  role: 'Leadership & Engineer',
+                  description: 'Management & Systems Integration'
+                },
+                {
+                  image: '/logo_transparent.png',
+                  name: 'Nathaniel Pérez',
+                  role: 'Report Writer',
+                  description: 'Technical documentation about the project'
+                },
+                {
+                  image:'/ppl/image.png',
+                  name: 'Héctor Suárez',
+                  role: 'Software Developer',
+                  description: 'Data Processing & Visualization'
+                },
+                {
+                  image: '/logo_transparent.png',
+                  name: 'Giovanni Cabrera',
+                  role: 'Assembly & Fabrication',
+                  description: 'CanSat structure assembly'
+                }
               ].map((member, index) => (
                 <motion.div
                   key={index}
@@ -256,15 +276,22 @@ export default function Home() {
                   whileHover={{ y: -4 }}
                   className="bg-surface-card rounded-2xl p-6 md:p-8 shadow-soft hover:shadow-card border border-line border-white text-center transition-all duration-300"
                 >
-                  <div className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-5 rounded-full bg-white flex items-center justify-center">
-                    <UserIcon className="w-9 h-9 md:w-11 md:h-11 text-black/70" />
+                  <div className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-5 rounded-full bg-white/10 border border-white/20 overflow-hidden">
+                    <Image
+                      src={member.image}
+                      alt={member.name}
+                      width={96}
+                      height={96}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <h3 className="text-white md:text-lg font-semibold mb-1 text-ink">
                     {member.name}
                   </h3>
-                  <p className="text-slate-200 text-xs md:text-sm">
+                  <p className="text-slate-100 text-xs md:text-sm font-medium mb-1.5">
                     {member.role}
                   </p>
+                  <p className="text-slate-200 text-xs md:text-sm">{member.description}</p>
                 </motion.div>
               ))}
             </div>
