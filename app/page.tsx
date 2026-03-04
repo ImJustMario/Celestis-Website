@@ -133,7 +133,7 @@ export default function Home() {
                 To-write
               </p>
               <Link href="/data" className="inline-block">
-                <button className="bg-[#0E7490] hover:bg-[#155E75] text-white font-semibold py-3 px-7 md:py-3.5 md:px-8 rounded-full text-sm sm:text-base transition-all duration-300 shadow-soft hover:shadow-lift transform hover:scale-[1.02] cursor-pointer">
+                <button className="bg-[#0E7490] hover:bg-[#155E75] shadow-lg text-white font-semibold py-3 px-7 md:py-3.5 md:px-8 rounded-full text-sm sm:text-base transition-all duration-300 shadow-soft hover:shadow-lift transform hover:scale-[1.02] cursor-pointer">
                   View Collected Data
                 </button>
               </Link>
@@ -187,7 +187,7 @@ export default function Home() {
                   transition={{ duration: 0.5, delay: index * 0.08 }}
                   viewport={{ once: true }}
                   whileHover={{ y: -4 }}
-                  className="bg-surface-card rounded-2xl p-6 md:p-8 shadow-soft hover:shadow-card border border-line border-white transition-all duration-300"
+                  className="bg-surface-card rounded-2xl p-6 md:p-8 inset-shadow-sm/50 hover:shadow-card transition-all duration-300"
                 >
                   <div className="w-11 h-11 mb-5 rounded-xl flex items-center justify-center">
                     {goal.icon}
@@ -243,7 +243,7 @@ export default function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
               {[
                 {
-                  image: '/logo_transparent.png',
+                  image: '/ppl/image.png',
                   name: 'Laura Sánchez',
                   role: 'Leadership & Engineer',
                   description: 'Management & Systems Integration'
@@ -255,7 +255,7 @@ export default function Home() {
                   description: 'Technical documentation about the project'
                 },
                 {
-                  image:'/ppl/image.png',
+                  image:'/ppl/hector.png',
                   name: 'Héctor Suárez',
                   role: 'Software Developer',
                   description: 'Data Processing & Visualization'
@@ -274,7 +274,7 @@ export default function Home() {
                   transition={{ duration: 0.5, delay: index * 0.08 }}
                   viewport={{ once: true }}
                   whileHover={{ y: -4 }}
-                  className="bg-surface-card rounded-2xl p-6 md:p-8 shadow-soft hover:shadow-card border border-line border-white text-center transition-all duration-300"
+                  className="bg-surface-card rounded-2xl p-6 md:p-8 shadow-xl r hover:shadow-card text-center transition-all duration-300"
                 >
                   <div className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-5 rounded-full bg-white/10 border border-white/20 overflow-hidden">
                     <Image
