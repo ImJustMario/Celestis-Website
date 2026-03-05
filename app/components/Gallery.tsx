@@ -11,22 +11,34 @@ import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from './Icons'
 
 interface GalleryImage {
   src: string
+  thumbnailSrc: string
   alt: string
+}
+
+interface GalleryResponse {
+  images: Array<{
+    src: string
+    thumbnailSrc: string
+    sizeBytes: number
+  }>
+  maxImageBytes: number
 }
 
 export default function Gallery() {
   const [images, setImages] = useState<GalleryImage[]>([])
   const [ready, setReady] = useState(false)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
+  const [fullLoaded, setFullLoaded] = useState(false)
 
   /* Fetch image list from the API route that reads /public/gallery */
   useEffect(() => {
     fetch('/api/gallery')
       .then((r) => r.json())
-      .then((paths: string[]) => {
+      .then((payload: GalleryResponse) => {
         setImages(
-          paths.map((src, i) => ({
-            src,
+          payload.images.map((image, i) => ({
+            src: image.src,
+            thumbnailSrc: image.thumbnailSrc,
             alt: `Celestis project — image ${i + 1}`,
           }))
         )
@@ -34,6 +46,10 @@ export default function Gallery() {
       })
       .catch(() => setReady(true))
   }, [])
+
+  useEffect(() => {
+    setFullLoaded(false)
+  }, [selectedIdx])
 
   /* ── Lightbox keyboard controls ── */
   const closeLightbox = useCallback(() => setSelectedIdx(null), [])
@@ -88,10 +104,11 @@ export default function Gallery() {
             onClick={() => setSelectedIdx(index)}
           >
             <img
-              src={img.src}
+              src={img.thumbnailSrc}
               alt={img.alt}
               className="w-full h-auto block transition-all duration-500 group-hover:scale-[1.03]"
               loading="lazy"
+              decoding="async"
             />
             {/* Subtle vignette on hover */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400 pointer-events-none" />
@@ -144,18 +161,33 @@ export default function Gallery() {
             </LightboxButton>
 
             {/* Image */}
-            <motion.img
-              key={selectedIdx}
-              initial={{ opacity: 0, scale: 0.93 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.93 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              src={images[selectedIdx].src}
-              alt={images[selectedIdx].alt}
-              className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg select-none"
+            <div
+              className="relative max-w-[90vw] max-h-[85vh]"
               onClick={(e) => e.stopPropagation()}
-              draggable={false}
-            />
+            >
+              <img
+                src={images[selectedIdx].thumbnailSrc}
+                alt={images[selectedIdx].alt}
+                className={`max-w-[90vw] max-h-[85vh] object-contain rounded-lg select-none blur-sm transition-opacity duration-200 ${
+                  fullLoaded ? 'opacity-0 absolute inset-0' : 'opacity-100'
+                }`}
+                draggable={false}
+              />
+              <motion.img
+                key={selectedIdx}
+                initial={{ opacity: 0, scale: 0.93 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.93 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                src={images[selectedIdx].src}
+                alt={images[selectedIdx].alt}
+                className={`max-w-[90vw] max-h-[85vh] object-contain rounded-lg select-none transition-opacity duration-300 ${
+                  fullLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                onLoad={() => setFullLoaded(true)}
+                draggable={false}
+              />
+            </div>
 
             {/* Counter */}
             <span className="absolute bottom-5 left-1/2 -translate-x-1/2 text-ink-muted text-sm tabular-nums select-none">

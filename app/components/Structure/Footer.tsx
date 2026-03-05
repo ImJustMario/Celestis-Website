@@ -9,7 +9,7 @@ export default function Footer() {
             <div className="flex flex-col items-center md:items-start">
               <div className="flex items-center mb-4">
                 <img src="/logo_transparent.png" alt="Logo" className="h-8 w-8 mr-2" />
-                <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-cyan-500 to-cyan-400">
+                <span className="text-xl font-semibold bg-clip-text text-transparent bg-white">
                   Celestis
                 </span>
               </div>

@@ -127,10 +127,10 @@ export default function Home() {
               <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-5 md:mb-6 text-[#F8FAFC] tracking-tight">
                 Project Description
               </h2>
-              <p className="text-sm sm:text-base md:text-lg text-[#E2E8F0] leading-relaxed mb-4 md:mb-5">
+              <p className="text-sm sm:text-base md:text-lg text-slate-50 leading-relaxed mb-4 md:mb-5">
                 Celestis is an innovative CanSat mission designed to collect atmospheric data during descent with stable telemetry and high-quality sensing.
               </p>
-              <p className="text-sm sm:text-base md:text-lg text-[#E2E8F0] leading-relaxed mb-6 md:mb-8">
+              <p className="text-sm sm:text-base md:text-lg text-slate-50 leading-relaxed mb-6 md:mb-8">
                 To-write
               </p>
               <Link href="/data" className="inline-block">
@@ -188,7 +188,7 @@ export default function Home() {
                   transition={{ duration: 0.5, delay: index * 0.08 }}
                   viewport={{ once: true }}
                   whileHover={{ y: -4 }}
-                  className="bg-surface-card rounded-2xl p-6 md:p-8 inset-shadow-sm/50 hover:shadow-card transition-all duration-300"
+                  className="bg-surface-card rounded-2xl p-6 md:p-8 shadow-xl hover:shadow-card  transition-all duration-300"
                 >
                   <div className="w-11 h-11 mb-5 rounded-xl flex items-center justify-center">
                     {goal.icon}
