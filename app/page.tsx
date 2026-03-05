@@ -7,6 +7,7 @@ import { useRef } from 'react'
 import { GlobeIcon, SignalIcon, AdjustmentsIcon, ChartBarIcon } from './components/Icons'
 import Gallery from './components/Gallery'
 import Particles from './components/Particles'
+import Footer from './components/Structure/Footer'
 
 export default function Home() {
   const transitionRef = useRef<HTMLDivElement | null>(null)
@@ -35,7 +36,7 @@ export default function Home() {
   const depthOverlayOpacity = useTransform(progress, [0, 1], [0, 0.18])
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-gradient-to-br from-[#AFD5F0] via-[#A3C6E0] to-[#7C9FB9]">
       {/* ── Hero + scroll transition ── */}
       <section id="hero" ref={transitionRef} className="relative h-[240dvh] md:h-[210dvh]">
         <div className="sticky top-0 h-dvh pb-[env(safe-area-inset-bottom)] overflow-hidden">
@@ -53,7 +54,7 @@ export default function Home() {
               scale: firstScreenScale,
               willChange: 'transform, filter, opacity'
             }}
-            className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-gradient-to-br from-[#AFD5F0] via-[#A3C6E0] to-[#7C9FB9]"
+            className="absolute inset-0 flex flex-col items-center justify-center z-10 "
           >
             <Particles />
             <div className="text-center max-w-3xl px-4">
@@ -143,7 +144,7 @@ export default function Home() {
       </section>
 
       {/* ── Mission Goals ── */}
-      <section id="mission" className="py-20 md:py-32 px-4 border-t border-line border-white">
+      <section id="mission" className="py-20 md:py-32 px-4">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
@@ -300,11 +301,7 @@ export default function Home() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="py-10 text-center border-t border-line border-white">
-        <p className="text-slate-200 text-sm">
-          Celestis CanSat Project. All rights reserved.
-        </p>
-      </footer>
+      <Footer/>
     </main>
   )
 }

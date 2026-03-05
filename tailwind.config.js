@@ -25,7 +25,7 @@ export default {
         line: '#E8E8E6',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'sans-serif', 'system-ui'],
       },
       boxShadow: {
         soft: '0 2px 16px 0 rgba(0,0,0,0.04)',
