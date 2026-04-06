@@ -84,6 +84,7 @@ npm start
 - Data table showing altitude vs selected metric
 - Statistics cards for each metric
 - Mission status dashboard
+- Real-time streaming over WebSocket (`/api/ws`) for live telemetry updates
 
 ## Customization
 

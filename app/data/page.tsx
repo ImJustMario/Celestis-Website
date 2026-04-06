@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { useState, useEffect, useRef, useMemo, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import {
   ThermometerIcon,
   WindIcon,
@@ -42,8 +42,13 @@ interface ChartPoint {
   value: number
 }
 
-const POLL_INTERVAL_MS = 2000
+const WS_RECONNECT_MS = 2000
 const HISTORY_LIMIT = 200
+
+type TelemetryWsMessage =
+  | { type: 'snapshot'; records: TelemetryRecord[] }
+  | { type: 'append'; record: TelemetryRecord }
+  | { type: 'error'; message: string }
 
 const metrics: Metric[] = [
   {
@@ -89,10 +94,23 @@ function useChartInstance(
   metric: Metric,
   points: ChartPoint[]
 ) {
-  const chartRef = useRef<{ destroy: () => void } | null>(null)
+  const chartRef = useRef<{
+    destroy: () => void
+    data: {
+      labels: Array<string | number>
+      datasets: Array<{ data: number[] }>
+    }
+    update: (mode?: 'none' | 'hide' | 'show' | 'default' | 'active' | 'resize' | 'reset') => void
+  } | null>(null)
+  const previousPointsRef = useRef<ChartPoint[]>([])
+  const latestPointsRef = useRef<ChartPoint[]>(points)
 
   useEffect(() => {
-    if (typeof window === 'undefined' || points.length === 0) return
+    latestPointsRef.current = points
+  }, [points])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
 
     let cancelled = false
 
@@ -105,15 +123,15 @@ function useChartInstance(
         chartRef.current.destroy()
       }
 
-      const dataset = points
+      const initialPoints = latestPointsRef.current
       chartRef.current = new Chart(canvasRef.current, {
         type: 'line',
         data: {
-          labels: dataset.map((d) => d.altitude),
+          labels: initialPoints.map((d) => d.altitude),
           datasets: [
             {
               label: metric.name,
-              data: dataset.map((d) => d.value),
+              data: initialPoints.map((d) => d.value),
               borderColor: metric.chartColor,
               backgroundColor: metric.chartFill,
               borderWidth: 2,
@@ -162,6 +180,8 @@ function useChartInstance(
           },
         },
       })
+
+      previousPointsRef.current = initialPoints
     }
 
     init()
@@ -172,24 +192,69 @@ function useChartInstance(
         chartRef.current.destroy()
       }
     }
-  }, [metric, canvasRef, points])
+  }, [metric, canvasRef])
+
+  useEffect(() => {
+    const chart = chartRef.current
+    if (!chart) return
+
+    const previous = previousPointsRef.current
+    const next = points
+    const labels = chart.data.labels
+    const values = chart.data.datasets[0]?.data
+
+    if (!values) return
+
+    const sharedLength = Math.min(previous.length, next.length)
+    let samePrefix = previous.length <= next.length
+
+    for (let index = 0; index < sharedLength; index += 1) {
+      const prevPoint = previous[index]
+      const nextPoint = next[index]
+      if (
+        prevPoint.altitude !== nextPoint.altitude ||
+        prevPoint.value !== nextPoint.value
+      ) {
+        samePrefix = false
+        break
+      }
+    }
+
+    if (samePrefix && next.length > previous.length) {
+      for (let index = previous.length; index < next.length; index += 1) {
+        labels.push(next[index].altitude)
+        values.push(next[index].value)
+      }
+      chart.update('none')
+      previousPointsRef.current = next
+      return
+    }
+
+    labels.length = 0
+    values.length = 0
+
+    for (const point of next) {
+      labels.push(point.altitude)
+      values.push(point.value)
+    }
+
+    chart.update('none')
+    previousPointsRef.current = next
+  }, [points])
 }
 
 function MetricChart({ metric, points }: { metric: Metric; points: ChartPoint[] }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   useChartInstance(canvasRef, metric, points)
 
-  if (points.length === 0) {
-    return (
-      <div className="flex h-[280px] items-center justify-center text-sm text-ink-muted">
-        Waiting for telemetry data...
-      </div>
-    )
-  }
-
   return (
     <div style={{ position: 'relative', width: '100%', height: 280 }}>
       <canvas ref={canvasRef} />
+      {points.length === 0 ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-ink-muted">
+          Waiting for telemetry data...
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -232,33 +297,91 @@ export default function DataPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
+  const [connectionState, setConnectionState] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
   const rowsPerPage = 8
 
-  const fetchData = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/data?limit=${HISTORY_LIMIT}`, {
-        cache: 'no-store',
-      })
+  useEffect(() => {
+    let stopped = false
+    let reconnectTimer: number | null = null
+    let socket: WebSocket | null = null
 
-      if (!response.ok) {
-        throw new Error('Could not load telemetry data')
+    const connect = () => {
+      if (stopped) return
+
+      setConnectionState('connecting')
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      socket = new WebSocket(`${protocol}//${window.location.host}/api/ws?limit=${HISTORY_LIMIT}`)
+
+      socket.onopen = () => {
+        setConnectionState('connected')
+        setError(null)
       }
 
-      const payload = (await response.json()) as { records?: TelemetryRecord[] }
-      setRecords(Array.isArray(payload.records) ? payload.records : [])
-      setError(null)
-    } catch {
-      setError('Could not connect to telemetry API')
-    } finally {
-      setIsLoading(false)
+      socket.onmessage = (event) => {
+        let payload: TelemetryWsMessage | null = null
+        try {
+          payload = JSON.parse(event.data as string) as TelemetryWsMessage
+        } catch {
+          return
+        }
+
+        if (!payload) return
+
+        if (payload.type === 'snapshot') {
+          setRecords(payload.records)
+          setIsLoading(false)
+          return
+        }
+
+        if (payload.type === 'append') {
+          setRecords((previous) => {
+            if (previous.length > 0 && previous[previous.length - 1].id >= payload.record.id) {
+              return previous
+            }
+
+            const next = [...previous, payload.record]
+            if (next.length > HISTORY_LIMIT) {
+              return next.slice(next.length - HISTORY_LIMIT)
+            }
+
+            return next
+          })
+          setIsLoading(false)
+          return
+        }
+
+        if (payload.type === 'error') {
+          setError(payload.message)
+          setIsLoading(false)
+        }
+      }
+
+      socket.onclose = () => {
+        setConnectionState('disconnected')
+        if (stopped) return
+        reconnectTimer = window.setTimeout(connect, WS_RECONNECT_MS)
+      }
+
+      socket.onerror = () => {
+        setError('Could not connect to telemetry WebSocket')
+      }
+    }
+
+    void fetch('/api/ws').catch(() => {
+      setError('Could not initialize telemetry WebSocket endpoint')
+    })
+    connect()
+
+    return () => {
+      stopped = true
+      if (reconnectTimer !== null) {
+        window.clearTimeout(reconnectTimer)
+      }
+      if (socket) {
+        socket.close()
+      }
     }
   }, [])
-
-  useEffect(() => {
-    fetchData()
-    const interval = window.setInterval(fetchData, POLL_INTERVAL_MS)
-    return () => window.clearInterval(interval)
-  }, [fetchData])
 
   const activeMetric = metrics.find((m) => m.id === selectedMetric)!
 
@@ -374,7 +497,7 @@ export default function DataPage() {
         >
           <h2 className="mb-1 text-xl font-semibold text-ink">{activeMetric.name} vs Altitude</h2>
           <p className="mb-6 text-sm text-ink-muted">
-            Auto-refresh every {Math.floor(POLL_INTERVAL_MS / 1000)}s · {metricData.length} data points
+            Live via WebSocket ({connectionState}) · {metricData.length} data points
           </p>
           <MetricChart metric={activeMetric} points={metricData} />
         </motion.div>
