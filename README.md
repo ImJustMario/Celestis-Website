@@ -29,12 +29,24 @@ cd Celestis-Website
 npm install
 ```
 
-3. Run the development server:
+3. Configure MySQL connection (required for `/data`):
+```bash
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=your_user
+MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=your_database
+```
+
+You can place these values in `.env.local`.
+You can also copy from `.env.example`.
+
+4. Run the development server:
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ### Build for Production
 
