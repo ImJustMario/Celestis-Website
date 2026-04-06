@@ -131,7 +131,7 @@ export default function Home() {
                 Celestis is an innovative CanSat mission designed to collect atmospheric data during descent with stable telemetry and high-quality sensing.
               </p>
               <p className="text-sm sm:text-base md:text-lg text-slate-50 leading-relaxed mb-6 md:mb-8">
-                To-write
+                Developed by a team of four students from IES Faro de Maspalomas, our primary mission measures temperature and atmospheric pressure throughout the descent, transmitting data in real time to a ground station via LoRa at 868 MHz. Our secondary mission goes further — using a camera and environmental sensors to analyse terrain during descent, identifying zones suitable for plant reforestation based on soil type, altitude, humidity, and proximity to water. This has direct applications for combating desertification in the Canary Islands.
               </p>
               <Link href="/data" className="inline-block">
                 <button className="bg-[#0E7490] hover:bg-[#155E75] shadow-lg text-white font-semibold py-3 px-7 md:py-3.5 md:px-8 rounded-full text-sm sm:text-base transition-all duration-300 shadow-soft hover:shadow-lift transform hover:scale-[1.02] cursor-pointer">
@@ -246,26 +246,26 @@ export default function Home() {
                 {
                   image: '/ppl/image.png',
                   name: 'Laura Sánchez',
-                  role: 'Leadership & Engineer',
-                  description: 'Management & Systems Integration'
+                  role: 'Team Captain & Engineer',
+                  description: 'Organisation, antenna & parachute design, sponsorships and merchandising'
                 },
                 {
                   image: '/logo_transparent.png',
                   name: 'Nathaniel Pérez',
                   role: 'Report Writer',
-                  description: 'Technical documentation about the project'
+                  description: 'Technical documentation, parachute assembly and sponsor outreach'
                 },
                 {
                   image:'/ppl/hector.png',
                   name: 'Héctor Suárez',
                   role: 'Software Developer',
-                  description: 'Data Processing & Visualization'
+                  description: 'Circuit schematics, programming, sensor testing and data visualisation'
                 },
                 {
                   image: '/logo_transparent.png',
                   name: 'Giovanni Cabrera',
                   role: 'Assembly & Fabrication',
-                  description: 'CanSat structure assembly'
+                  description: 'CanSat structure assembly and antenna construction support'
                 }
               ].map((member, index) => (
                 <motion.div
