@@ -1,33 +1,19 @@
 import { NextResponse } from 'next/server'
-import type { RowDataPacket } from 'mysql2'
-import { getMysqlPool } from '@/lib/mysql'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
 const DEFAULT_LIMIT = 200
 const MAX_LIMIT = 1000
 
-type DbTelemetryRow = RowDataPacket & {
-  id: number
-  timestamp: number
-  temperature: number | string
-  co2ppm: number | string
-  altitude: number | string
-  pressure: number | string
-  humidity: number | string
-  gpsAltitude: number | string | null
-  gpsLatitude: number | string | null
-  gpsLongitude: number | string | null
-  gpsConnected: number | boolean
-}
-
 function toNumber(value: number | string | null) {
-  if (value === null) return null
+  if (value === null || value === undefined) return null
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function toBoolean(value: number | boolean) {
+function toBoolean(value: number | boolean | null) {
+  if (value === null || value === undefined) return false
   if (typeof value === 'boolean') return value
   return value === 1
 }
@@ -40,30 +26,20 @@ export async function GET(request: Request) {
       ? Math.min(Math.max(Math.floor(limitParam), 1), MAX_LIMIT)
       : DEFAULT_LIMIT
 
-    const pool = getMysqlPool()
-    const [rows] = await pool.query<DbTelemetryRow[]>(
-      `
-        SELECT
-          id,
-          timestamp,
-          temperature,
-          co2ppm,
-          altitude,
-          pressure,
-          humidity,
-          gpsAltitude,
-          gpsLatitude,
-          gpsLongitude,
-          gpsConnected
-        FROM data
-        ORDER BY id DESC
-        LIMIT ?
-      `,
-      [limit]
-    )
+    const supabase = getSupabaseClient()
+    
+    const { data: rows, error } = await supabase
+      .from('data')
+      .select('id, timestamp, temperature, co2ppm, altitude, pressure, humidity, gpsAltitude, gpsLatitude, gpsLongitude, gpsConnected')
+      .order('id', { ascending: false })
+      .limit(limit)
 
-    const records = rows
-      .map((row) => ({
+    if (error) {
+      throw error
+    }
+
+    const records = (rows || [])
+      .map((row: any) => ({
         id: row.id,
         timestamp: row.timestamp,
         temperature: toNumber(row.temperature) ?? 0,
@@ -84,7 +60,8 @@ export async function GET(request: Request) {
       latest: records.length > 0 ? records[records.length - 1] : null,
       fetchedAt: Date.now(),
     })
-  } catch {
+  } catch (err: any) {
+    console.error('Supabase error:', err)
     return NextResponse.json(
       {
         records: [],

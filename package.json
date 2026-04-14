@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/ImJustMario/Celestis-Website#readme",
   "dependencies": {
+    "@supabase/supabase-js": "^2.103.0",
     "chart.js": "^4.5.1",
     "framer-motion": "^12.34.0",
     "mysql2": "^3.20.0",
