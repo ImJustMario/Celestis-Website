@@ -11,13 +11,13 @@ import {
   ChevronRightIcon,
 } from '../components/Icons'
 
-type MetricId = 'temperature' | 'pressure' | 'humidity' | 'co2ppm'
+type MetricId = 'temperature' | 'pressure' | 'humidity' | 'co2ppm' | 'altitude' | 'velocity'
 
 interface Metric {
   id: MetricId
   name: string
   unit: string
-  icon: ReactNode
+  icon?: ReactNode
   color: string
   chartColor: string
   chartFill: string
@@ -38,12 +38,23 @@ interface TelemetryRecord {
 }
 
 interface ChartPoint {
+  timeFormatted: string
   altitude: number
   value: number
+  secondaryValue: number
+  velocity: number
 }
 
 const POLL_INTERVAL_MS = 2000
-const HISTORY_LIMIT = 200
+const HISTORY_LIMIT = 2000
+
+const TIME_RANGES = {
+  '5m': 5 * 60,
+  '15m': 15 * 60,
+  '30m': 30 * 60,
+  '1h': 60 * 60,
+  'all': 0
+}
 
 const metrics: Metric[] = [
   {
@@ -69,72 +80,101 @@ const metrics: Metric[] = [
     name: 'Humidity',
     unit: '%',
     icon: <DropletIcon className="h-5 w-5" />,
-    color: 'text-teal-400',
-    chartColor: '#2dd4bf',
-    chartFill: 'rgba(45,212,191,0.12)',
-  },
-  {
-    id: 'co2ppm',
-    name: 'CO2',
-    unit: 'ppm',
-    icon: <WindIcon className="h-5 w-5" />,
     color: 'text-violet-400',
     chartColor: '#a78bfa',
     chartFill: 'rgba(167,139,250,0.12)',
+  },
+  {
+    id: 'altitude',
+    name: 'Altitude',
+    unit: 'm',
+    color: 'text-gray-400',
+    chartColor: '#888888',
+    chartFill: 'rgba(136,136,136,0.12)',
+  },
+  {
+    id: 'velocity',
+    name: 'Vertical Velocity',
+    unit: 'm/s',
+    color: 'text-rose-400',
+    chartColor: '#f43f5e',
+    chartFill: 'rgba(244,63,94,0.12)',
   },
 ]
 
 function useChartInstance(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   metric: Metric,
+  secondaryMetric: Metric,
   points: ChartPoint[]
 ) {
-  const chartRef = useRef<{ destroy: () => void } | null>(null)
+  const chartRef = useRef<any>(null)
+  const metricRef = useRef(metric)
+  const secondaryMetricRef = useRef(secondaryMetric)
 
   useEffect(() => {
-    if (typeof window === 'undefined' || points.length === 0) return
+    metricRef.current = metric
+    secondaryMetricRef.current = secondaryMetric
+  }, [metric, secondaryMetric])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !canvasRef.current) return
 
     let cancelled = false
+    let chartInstance: any = null
 
     const init = async () => {
       const { Chart, registerables } = await import('chart.js')
       Chart.register(...registerables)
-      if (cancelled || !canvasRef.current) return
+      if (cancelled || !canvasRef.current || chartRef.current) return
 
-      if (chartRef.current) {
-        chartRef.current.destroy()
-      }
-
-      const dataset = points
-      chartRef.current = new Chart(canvasRef.current, {
+      chartInstance = new Chart(canvasRef.current, {
         type: 'line',
         data: {
-          labels: dataset.map((d) => d.altitude),
+          labels: [],
           datasets: [
             {
-              label: metric.name,
-              data: dataset.map((d) => d.value),
-              borderColor: metric.chartColor,
-              backgroundColor: metric.chartFill,
+              label: metricRef.current.name,
+              data: [],
+              borderColor: metricRef.current.chartColor,
+              backgroundColor: metricRef.current.chartFill,
               borderWidth: 2,
               pointRadius: 4,
-              pointBackgroundColor: metric.chartColor,
+              pointBackgroundColor: metricRef.current.chartColor,
               pointHoverRadius: 6,
               fill: true,
+              yAxisID: 'y',
+              tension: 0.4,
+            },
+            {
+              label: secondaryMetricRef.current.name,
+              data: [],
+              borderColor: secondaryMetricRef.current.chartColor,
+              backgroundColor: secondaryMetricRef.current.chartFill,
+              borderWidth: 2,
+              pointRadius: 0,
+              yAxisID: 'y1',
               tension: 0.4,
             },
           ],
         },
         options: {
+          animation: false,
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
             legend: { display: false },
             tooltip: {
+              mode: 'index',
+              intersect: false,
               callbacks: {
-                title: (items: Array<{ label: string }>) => `Altitude: ${items[0].label} m`,
-                label: (item: { raw: number }) =>
-                  ` ${metric.name}: ${Number(item.raw).toFixed(1)} ${metric.unit}`,
+                title: (items: Array<{ label: string }>) => `Time: ${items[0].label}`,
+                label: (item: any) => {
+                  if (item.datasetIndex === 0) {
+                    return ` ${metricRef.current.name}: ${Number(item.raw).toFixed(1)} ${metricRef.current.unit}`
+                  }
+                  return ` ${secondaryMetricRef.current.name}: ${Number(item.raw).toFixed(1)} ${secondaryMetricRef.current.unit}`
+                },
               },
             },
           },
@@ -142,7 +182,7 @@ function useChartInstance(
             x: {
               title: {
                 display: true,
-                text: 'Altitude (m)',
+                text: 'Time',
                 color: '#94a3b8',
                 font: { size: 12 },
               },
@@ -150,46 +190,105 @@ function useChartInstance(
               grid: { color: 'rgba(148,163,184,0.1)' },
             },
             y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
               title: {
                 display: true,
-                text: `${metric.name} (${metric.unit})`,
+                text: `${metricRef.current.name} (${metricRef.current.unit})`,
                 color: '#94a3b8',
                 font: { size: 12 },
               },
               ticks: { color: '#94a3b8' },
               grid: { color: 'rgba(148,163,184,0.1)' },
             },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: `${secondaryMetricRef.current.name} (${secondaryMetricRef.current.unit})`,
+                color: secondaryMetricRef.current.chartColor,
+                font: { size: 12 },
+              },
+              ticks: { color: secondaryMetricRef.current.chartColor },
+              grid: { drawOnChartArea: false },
+            },
           },
         },
       })
+      
+      chartRef.current = chartInstance
+      
+      // Initial render with current points if they exist
+      if (points.length > 0) {
+        updateChartData(metric, secondaryMetric, points)
+      }
     }
 
     init()
 
     return () => {
       cancelled = true
-      if (chartRef.current) {
-        chartRef.current.destroy()
+      if (chartInstance || chartRef.current) {
+        (chartInstance || chartRef.current).destroy()
+        chartRef.current = null
       }
     }
-  }, [metric, canvasRef, points])
+  }, [canvasRef]) // Run exactly once per canvas
+
+  // Helper to apply updates
+  const updateChartData = (currentMetric: Metric, currentSecondary: Metric, currentPoints: ChartPoint[]) => {
+    const chart = chartRef.current
+    if (!chart) return
+
+    chart.data.labels = currentPoints.map((d) => d.timeFormatted)
+    
+    // Dataset 0
+    chart.data.datasets[0].data = currentPoints.map((d) => d.value)
+    chart.data.datasets[0].label = currentMetric.name
+    chart.data.datasets[0].borderColor = currentMetric.chartColor
+    chart.data.datasets[0].backgroundColor = currentMetric.chartFill
+    chart.data.datasets[0].pointBackgroundColor = currentMetric.chartColor
+    chart.options.scales.y.title.text = `${currentMetric.name} (${currentMetric.unit})`
+    
+    // Dataset 1
+    chart.data.datasets[1].data = currentPoints.map((d) => d.secondaryValue)
+    chart.data.datasets[1].label = currentSecondary.name
+    chart.data.datasets[1].borderColor = currentSecondary.chartColor
+    chart.data.datasets[1].backgroundColor = currentSecondary.chartFill
+    chart.options.scales.y1.title.text = `${currentSecondary.name} (${currentSecondary.unit})`
+    chart.options.scales.y1.title.color = currentSecondary.chartColor
+    chart.options.scales.y1.ticks.color = currentSecondary.chartColor
+    
+    chart.update('none')
+  }
+
+  // Effect to update data without destroying chart
+  useEffect(() => {
+    if (chartRef.current) {
+      updateChartData(metric, secondaryMetric, points)
+    }
+  }, [metric, secondaryMetric, points])
 }
 
-function MetricChart({ metric, points }: { metric: Metric; points: ChartPoint[] }) {
+function MetricChart({ metric, secondaryMetric, points }: { metric: Metric; secondaryMetric: Metric; points: ChartPoint[] }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  useChartInstance(canvasRef, metric, points)
-
-  if (points.length === 0) {
-    return (
-      <div className="flex h-[280px] items-center justify-center text-sm text-ink-muted">
-        Waiting for telemetry data...
-      </div>
-    )
-  }
+  useChartInstance(canvasRef, metric, secondaryMetric, points)
 
   return (
     <div style={{ position: 'relative', width: '100%', height: 280 }}>
-      <canvas ref={canvasRef} />
+      <div 
+        className="flex h-[280px] items-center justify-center text-sm text-ink-muted"
+        style={{ display: points.length === 0 ? 'flex' : 'none', position: 'absolute', inset: 0 }}
+      >
+        Waiting for telemetry data...
+      </div>
+      <canvas 
+        ref={canvasRef} 
+        style={{ display: points.length > 0 ? 'block' : 'none' }} 
+      />
     </div>
   )
 }
@@ -228,6 +327,8 @@ function formatLastUpdate(timestamp?: number) {
 
 export default function DataPage() {
   const [selectedMetric, setSelectedMetric] = useState<MetricId>('temperature')
+  const [secondaryMetric, setSecondaryMetric] = useState<MetricId>('altitude')
+  const [timeRange, setTimeRange] = useState<keyof typeof TIME_RANGES>('5m')
   const [records, setRecords] = useState<TelemetryRecord[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -254,6 +355,20 @@ export default function DataPage() {
     }
   }, [])
 
+  /*const fetchData = async () => {
+    try {
+      const response = await fetch(`/api/data?limit=${HISTORY_LIMIT}`);
+      const data = await response.json();
+      setRecords(data.records || []);
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Could not connect to telemetry API');
+    } finally {
+      setIsLoading(false);
+    }
+  };*/
+
   useEffect(() => {
     fetchData()
     const interval = window.setInterval(fetchData, POLL_INTERVAL_MS)
@@ -261,15 +376,42 @@ export default function DataPage() {
   }, [fetchData])
 
   const activeMetric = metrics.find((m) => m.id === selectedMetric)!
+  const activeSecondaryMetric = metrics.find((m) => m.id === secondaryMetric)!
 
   const metricData = useMemo<ChartPoint[]>(() => {
-    return records
-      .map((record) => ({
-        altitude: record.altitude,
-        value: record[selectedMetric],
-      }))
-      .filter((point) => Number.isFinite(point.altitude) && Number.isFinite(point.value))
-  }, [records, selectedMetric])
+    let sortedRecords = [...records].sort((a, b) => a.timestamp - b.timestamp)
+    if (sortedRecords.length > 0 && TIME_RANGES[timeRange] !== 0) {
+      const latestTimestamp = sortedRecords[sortedRecords.length - 1].timestamp
+      const minTimestamp = latestTimestamp - TIME_RANGES[timeRange]
+      sortedRecords = sortedRecords.filter(item => item.timestamp >= minTimestamp)
+    }
+
+    return sortedRecords
+      .map((record, index, arr) => {
+        const date = new Date(record.timestamp * 1000)
+        const timeFormatted = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`
+        
+        let velocity = 0
+        if (index > 0) {
+          const prevData = arr[index - 1]
+          const timeDiff = record.timestamp - prevData.timestamp
+          if (timeDiff > 0) {
+            velocity = (record.altitude - prevData.altitude) / timeDiff
+            if (velocity > 50) velocity = 50
+            if (velocity < -50) velocity = -50
+          }
+        }
+        
+        return {
+          timeFormatted,
+          altitude: record.altitude,
+          velocity,
+          value: selectedMetric === 'velocity' ? velocity : record[selectedMetric],
+          secondaryValue: secondaryMetric === 'velocity' ? velocity : record[secondaryMetric],
+        }
+      })
+      .filter((point) => Number.isFinite(point.value) && Number.isFinite(point.secondaryValue))
+  }, [records, selectedMetric, secondaryMetric, timeRange])
 
   const totalPages = Math.max(1, Math.ceil(metricData.length / rowsPerPage))
   const startIndex = (currentPage - 1) * rowsPerPage
@@ -323,24 +465,71 @@ export default function DataPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="mb-8"
+          className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
         >
           <div className="flex flex-wrap gap-3">
             {metrics.map((metric) => (
               <button
                 key={metric.id}
-                onClick={() => setSelectedMetric(metric.id)}
-                className={`flex cursor-pointer items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold shadow-sm transition-all duration-300 ${
+                onClick={() => setSelectedMetric(metric.id as MetricId)}
+                className={`flex cursor-pointer flex-shrink-0 items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold shadow-sm transition-all duration-300 ${
                   selectedMetric === metric.id
                     ? 'border-accent bg-gray-800 text-white shadow-soft'
                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 hover:shadow-soft'
                 }`}
               >
-                <span className="flex items-center">{metric.icon}</span>
+                {metric.icon && <span className="flex items-center">{metric.icon}</span>}
                 {metric.name}
               </button>
             ))}
           </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-ink-muted">Time Filter:</span>
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value as keyof typeof TIME_RANGES)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-soft focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+            >
+              <option value="5m">Last 5 min</option>
+              <option value="15m">Last 15 min</option>
+              <option value="30m">Last 30 min</option>
+              <option value="1h">Last 1 hour</option>
+              <option value="all">All data</option>
+            </select>
+          </div>
+        </motion.div>
+
+        <motion.div
+          key={selectedMetric + '-chart'}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mb-8 rounded-2xl border border-line bg-surface-card p-6 shadow-soft md:p-8"
+        >
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-ink">{activeMetric.name} vs Time</h2>
+              <p className="text-sm text-ink-muted">
+                Auto-refresh every {Math.floor(POLL_INTERVAL_MS / 1000)}s · {metricData.length} data points
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-ink-muted">Compare against:</span>
+              <select
+                value={secondaryMetric}
+                onChange={(e) => setSecondaryMetric(e.target.value as MetricId)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 shadow-soft focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+              >
+                {metrics.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <MetricChart metric={activeMetric} secondaryMetric={activeSecondaryMetric} points={metricData} />
         </motion.div>
 
         <motion.div
@@ -348,7 +537,7 @@ export default function DataPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="mb-6 grid grid-cols-3 gap-4"
+          className="mb-8 grid grid-cols-3 gap-4"
         >
           {[
             { label: 'Max', value: `${max.toFixed(1)} ${activeMetric.unit}` },
@@ -363,20 +552,6 @@ export default function DataPage() {
               <p className={`text-xl font-semibold ${activeMetric.color}`}>{stat.value}</p>
             </div>
           ))}
-        </motion.div>
-
-        <motion.div
-          key={selectedMetric + '-chart'}
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="mb-8 rounded-2xl border border-line bg-surface-card p-6 shadow-soft md:p-8"
-        >
-          <h2 className="mb-1 text-xl font-semibold text-ink">{activeMetric.name} vs Altitude</h2>
-          <p className="mb-6 text-sm text-ink-muted">
-            Auto-refresh every {Math.floor(POLL_INTERVAL_MS / 1000)}s · {metricData.length} data points
-          </p>
-          <MetricChart metric={activeMetric} points={metricData} />
         </motion.div>
 
         <motion.div
