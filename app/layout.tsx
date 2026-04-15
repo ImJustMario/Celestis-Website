@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import Navbar from './components/Navbar'
+import { Analytics } from '@vercel/analytics/next'
 
 export const metadata: Metadata = {
   title: 'Celestis - CanSat Project',
@@ -23,6 +24,7 @@ export default function RootLayout({
       <body className="font-sans text-ink bg-surface">
         <Navbar />
         {children}
+        <Analytics />
       </body>
     </html>
   )
