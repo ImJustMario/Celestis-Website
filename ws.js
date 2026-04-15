@@ -49,9 +49,9 @@ function normalizeTelemetry(payload) {
     altitude: toNumber(payload.A, 0),
     pressure: toNumber(payload.P, 0),
     humidity: toNumber(payload.H, 0),
-    gpsAltitude: toNumber(payload.GPS?.A ?? payload.gpsAltitude),
-    gpsLatitude: toNumber(payload.GPS?.Lat ?? payload.gpsLatitude),
-    gpsLongitude: toNumber(payload.GPS?.Lon ?? payload.gpsLongitude),
+    gpsAltitude: toNumber(payload.GPS.AA ?? payload.gpsAltitude),
+    gpsLatitude: toNumber(payload.LAT ?? payload.gpsLatitude),
+    gpsLongitude: toNumber(payload.LON ?? payload.gpsLongitude),
     gpsConnected: toBoolean(payload.GPS?.S ?? payload.gpsConnected, false),
   };
 }

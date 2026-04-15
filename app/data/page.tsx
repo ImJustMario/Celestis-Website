@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useState, useEffect, useRef, useMemo, useCallback, type ReactNode } from 'react'
 import {
@@ -45,8 +46,15 @@ interface ChartPoint {
   velocity: number
 }
 
+interface GpsPoint {
+  gpsLatitude: number
+  gpsLongitude: number
+  timestamp: number
+}
+
 const POLL_INTERVAL_MS = 2000
 const HISTORY_LIMIT = 2000
+const TelemetryMap = dynamic(() => import('../components/TelemetryMap'), { ssr: false })
 
 const TIME_RANGES = {
   '5m': 5 * 60,
@@ -464,6 +472,24 @@ export default function DataPage() {
   const avg = values.length > 0 ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1) : '0.0'
 
   const latestRecord = records.length > 0 ? records[records.length - 1] : undefined
+  const gpsHistory = useMemo<GpsPoint[]>(
+    () =>
+      records
+        .filter(
+          (record) =>
+            record.gpsLatitude !== null &&
+            record.gpsLongitude !== null &&
+            Number.isFinite(record.gpsLatitude) &&
+            Number.isFinite(record.gpsLongitude)
+        )
+        .map((record) => ({
+          gpsLatitude: record.gpsLatitude as number,
+          gpsLongitude: record.gpsLongitude as number,
+          timestamp: record.timestamp,
+        })),
+    [records]
+  )
+  const latestGpsPoint = gpsHistory.length > 0 ? gpsHistory[gpsHistory.length - 1] : null
 
   const pageNumbers = useMemo(
     () => getPageNumbers(currentPage, totalPages),
@@ -592,6 +618,26 @@ export default function DataPage() {
               <p className={`text-xl font-semibold ${activeMetric.color}`}>{stat.value}</p>
             </div>
           ))}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="mb-8 rounded-2xl border border-line bg-surface-card p-6 shadow-soft md:p-8"
+        >
+          <div className="mb-5">
+            <h2 className="text-xl font-semibold text-ink">Trayectoria GPS</h2>
+            <p className="text-sm text-ink-muted">
+              Ruta historica y ultima posicion recibida por telemetria
+            </p>
+          </div>
+
+          <TelemetryMap
+            lat={latestGpsPoint?.gpsLatitude ?? null}
+            lng={latestGpsPoint?.gpsLongitude ?? null}
+            history={gpsHistory}
+          />
         </motion.div>
 
         <motion.div
