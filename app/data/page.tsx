@@ -56,6 +56,38 @@ const TIME_RANGES = {
   'all': 0
 }
 
+const AXIS_STEPS: Record<MetricId, number> = {
+  temperature: 5,
+  pressure: 10,
+  humidity: 5,
+  co2ppm: 50,
+  altitude: 10,
+  velocity: 1,
+}
+
+function getAxisBounds(values: number[], metricId: MetricId) {
+  const step = AXIS_STEPS[metricId]
+
+  if (values.length === 0) {
+    return {
+      min: 0,
+      max: step * 4,
+      step,
+    }
+  }
+
+  const minValue = Math.min(...values)
+  const maxValue = Math.max(...values)
+  const span = Math.max(maxValue - minValue, step * 2)
+  const padding = Math.max(step, span * 0.15)
+
+  return {
+    min: Math.floor((minValue - padding) / step) * step,
+    max: Math.ceil((maxValue + padding) / step) * step,
+    step,
+  }
+}
+
 const metrics: Metric[] = [
   {
     id: 'temperature',
@@ -69,7 +101,7 @@ const metrics: Metric[] = [
   {
     id: 'pressure',
     name: 'Pressure',
-    unit: 'kPa',
+    unit: 'hPa',
     icon: <WindIcon className="h-5 w-5" />,
     color: 'text-sky-400',
     chartColor: '#38bdf8',
@@ -252,6 +284,10 @@ function useChartInstance(
     chart.data.datasets[0].backgroundColor = currentMetric.chartFill
     chart.data.datasets[0].pointBackgroundColor = currentMetric.chartColor
     chart.options.scales.y.title.text = `${currentMetric.name} (${currentMetric.unit})`
+    const primaryAxis = getAxisBounds(currentPoints.map((point) => point.value), currentMetric.id)
+    chart.options.scales.y.min = primaryAxis.min
+    chart.options.scales.y.max = primaryAxis.max
+    chart.options.scales.y.ticks.stepSize = primaryAxis.step
     
     // Dataset 1
     chart.data.datasets[1].data = currentPoints.map((d) => d.secondaryValue)
@@ -261,6 +297,10 @@ function useChartInstance(
     chart.options.scales.y1.title.text = `${currentSecondary.name} (${currentSecondary.unit})`
     chart.options.scales.y1.title.color = currentSecondary.chartColor
     chart.options.scales.y1.ticks.color = currentSecondary.chartColor
+    const secondaryAxis = getAxisBounds(currentPoints.map((point) => point.secondaryValue), currentSecondary.id)
+    chart.options.scales.y1.min = secondaryAxis.min
+    chart.options.scales.y1.max = secondaryAxis.max
+    chart.options.scales.y1.ticks.stepSize = secondaryAxis.step
     
     chart.update('none')
   }
