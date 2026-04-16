@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useState, useEffect, useRef, useMemo, useCallback, type ReactNode } from 'react'
 import {
@@ -45,8 +46,15 @@ interface ChartPoint {
   velocity: number
 }
 
+interface GpsPoint {
+  gpsLatitude: number
+  gpsLongitude: number
+  timestamp: number
+}
+
 const POLL_INTERVAL_MS = 2000
 const HISTORY_LIMIT = 2000
+const TelemetryMap = dynamic(() => import('../components/TelemetryMap'), { ssr: false })
 
 const TIME_RANGES = {
   '5m': 5 * 60,
@@ -54,6 +62,38 @@ const TIME_RANGES = {
   '30m': 30 * 60,
   '1h': 60 * 60,
   'all': 0
+}
+
+const AXIS_STEPS: Record<MetricId, number> = {
+  temperature: 5,
+  pressure: 10,
+  humidity: 5,
+  co2ppm: 50,
+  altitude: 10,
+  velocity: 1,
+}
+
+function getAxisBounds(values: number[], metricId: MetricId) {
+  const step = AXIS_STEPS[metricId]
+
+  if (values.length === 0) {
+    return {
+      min: 0,
+      max: step * 4,
+      step,
+    }
+  }
+
+  const minValue = Math.min(...values)
+  const maxValue = Math.max(...values)
+  const span = Math.max(maxValue - minValue, step * 2)
+  const padding = Math.max(step, span * 0.15)
+
+  return {
+    min: Math.floor((minValue - padding) / step) * step,
+    max: Math.ceil((maxValue + padding) / step) * step,
+    step,
+  }
 }
 
 const metrics: Metric[] = [
@@ -69,7 +109,7 @@ const metrics: Metric[] = [
   {
     id: 'pressure',
     name: 'Pressure',
-    unit: 'kPa',
+    unit: 'hPa',
     icon: <WindIcon className="h-5 w-5" />,
     color: 'text-sky-400',
     chartColor: '#38bdf8',
@@ -252,6 +292,10 @@ function useChartInstance(
     chart.data.datasets[0].backgroundColor = currentMetric.chartFill
     chart.data.datasets[0].pointBackgroundColor = currentMetric.chartColor
     chart.options.scales.y.title.text = `${currentMetric.name} (${currentMetric.unit})`
+    const primaryAxis = getAxisBounds(currentPoints.map((point) => point.value), currentMetric.id)
+    chart.options.scales.y.min = primaryAxis.min
+    chart.options.scales.y.max = primaryAxis.max
+    chart.options.scales.y.ticks.stepSize = primaryAxis.step
     
     // Dataset 1
     chart.data.datasets[1].data = currentPoints.map((d) => d.secondaryValue)
@@ -261,6 +305,10 @@ function useChartInstance(
     chart.options.scales.y1.title.text = `${currentSecondary.name} (${currentSecondary.unit})`
     chart.options.scales.y1.title.color = currentSecondary.chartColor
     chart.options.scales.y1.ticks.color = currentSecondary.chartColor
+    const secondaryAxis = getAxisBounds(currentPoints.map((point) => point.secondaryValue), currentSecondary.id)
+    chart.options.scales.y1.min = secondaryAxis.min
+    chart.options.scales.y1.max = secondaryAxis.max
+    chart.options.scales.y1.ticks.stepSize = secondaryAxis.step
     
     chart.update('none')
   }
@@ -424,6 +472,24 @@ export default function DataPage() {
   const avg = values.length > 0 ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1) : '0.0'
 
   const latestRecord = records.length > 0 ? records[records.length - 1] : undefined
+  const gpsHistory = useMemo<GpsPoint[]>(
+    () =>
+      records
+        .filter(
+          (record) =>
+            record.gpsLatitude !== null &&
+            record.gpsLongitude !== null &&
+            Number.isFinite(record.gpsLatitude) &&
+            Number.isFinite(record.gpsLongitude)
+        )
+        .map((record) => ({
+          gpsLatitude: record.gpsLatitude as number,
+          gpsLongitude: record.gpsLongitude as number,
+          timestamp: record.timestamp,
+        })),
+    [records]
+  )
+  const latestGpsPoint = gpsHistory.length > 0 ? gpsHistory[gpsHistory.length - 1] : null
 
   const pageNumbers = useMemo(
     () => getPageNumbers(currentPage, totalPages),
@@ -552,6 +618,26 @@ export default function DataPage() {
               <p className={`text-xl font-semibold ${activeMetric.color}`}>{stat.value}</p>
             </div>
           ))}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="mb-8 rounded-2xl border border-line bg-surface-card p-6 shadow-soft md:p-8"
+        >
+          <div className="mb-5">
+            <h2 className="text-xl font-semibold text-ink">Trayectoria GPS</h2>
+            <p className="text-sm text-ink-muted">
+              Ruta historica y ultima posicion recibida por telemetria
+            </p>
+          </div>
+
+          <TelemetryMap
+            lat={latestGpsPoint?.gpsLatitude ?? null}
+            lng={latestGpsPoint?.gpsLongitude ?? null}
+            history={gpsHistory}
+          />
         </motion.div>
 
         <motion.div
