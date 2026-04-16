@@ -244,13 +244,13 @@ export default function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
               {[
                 {
-                  image: '/ppl/image.png',
+                  image: '/ppl/laura.png',
                   name: 'Laura Sánchez',
                   role: 'Team Captain & Engineer',
                   description: 'Organisation, antenna & parachute design, sponsorships and merchandising'
                 },
                 {
-                  image: '/logo_transparent.png',
+                  image: '/ppl/natha.png',
                   name: 'Nathaniel Pérez',
                   role: 'Report Writer',
                   description: 'Technical documentation, parachute assembly and sponsor outreach'
@@ -262,7 +262,7 @@ export default function Home() {
                   description: 'Circuit schematics, programming, sensor testing and data visualisation'
                 },
                 {
-                  image: '/logo_transparent.png',
+                  image: '/ppl/giova.png',
                   name: 'Giovanni Cabrera',
                   role: 'Assembly & Fabrication',
                   description: 'CanSat structure assembly and antenna construction support'
