@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 
 interface DeviceOrientationEventWithIOS extends DeviceOrientationEvent {
   webkitCompassHeading?: number
@@ -44,6 +44,9 @@ export default function TrackerPage() {
   const [error, setError] = useState<string>('')
   const [fetchDebug, setFetchDebug] = useState<string>('Esperando primer fetch...')
   const [lastFetchAt, setLastFetchAt] = useState<string>('')
+  const [showMap, setShowMap] = useState(false)
+  const mapRef = useRef<HTMLDivElement | null>(null)
+  const leafletMapRef = useRef<any>(null)
 
   // Watch device location
   useEffect(() => {
@@ -135,120 +138,102 @@ export default function TrackerPage() {
         .catch(console.error)
     }
   }
+  
+  useEffect(() => {
+    let cancelled = false
+
+    const loadLeaflet = async () => {
+      if (!showMap) return
+      const win = window as any
+      if (!win.L) {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+        document.head.appendChild(link)
+
+        await new Promise<void>((resolve, reject) => {
+          const s = document.createElement('script')
+          s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+          s.onload = () => resolve()
+          s.onerror = () => reject()
+          document.body.appendChild(s)
+        })
+      }
+
+      if (cancelled) return
+      const L = (window as any).L
+      if (mapRef.current && !leafletMapRef.current) {
+        const centerLat = deviceCoords?.lat ?? targetCoords?.lat ?? 0
+        const centerLon = deviceCoords?.lon ?? targetCoords?.lon ?? 0
+        const map = L.map(mapRef.current).setView([centerLat, centerLon], 13)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map)
+        if (deviceCoords) L.marker([deviceCoords.lat, deviceCoords.lon]).addTo(map).bindPopup('Tu ubicación')
+        if (targetCoords) L.marker([targetCoords.lat, targetCoords.lon]).addTo(map).bindPopup('Tracker')
+        leafletMapRef.current = map
+      }
+    }
+
+    loadLeaflet().catch((e) => console.error(e))
+
+    return () => {
+      cancelled = true
+      if (leafletMapRef.current) {
+        try { leafletMapRef.current.remove() } catch (e) {}
+        leafletMapRef.current = null
+      }
+    }
+  }, [showMap, deviceCoords, targetCoords])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-900 to-emerald-800 p-4">
-      {/* Card container — stacks vertically on mobile, side-by-side on md+ */}
-      <div className="w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col md:flex-row" style={{ background: '#1a9e5f' }}>
-
-        {/* ── LEFT / TOP PANEL ── */}
-        <div className="flex-1 flex flex-col justify-between p-6 gap-6">
-
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-widest font-medium" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                Buscando
-              </p>
-              <h1 className="text-2xl font-medium text-white mt-1">Celestis' Cansat</h1>
-            </div>
-            {/* Status dot */}
-            <div
-              className="w-3 h-3 rounded-full mt-1"
-              style={{
-                background: targetCoords ? '#a8ffcb' : 'rgba(255,255,255,0.35)',
-                boxShadow: targetCoords ? '0 0 0 4px rgba(168,255,203,0.2)' : 'none'
-              }}
-              title={targetCoords ? 'Conectado' : 'Sin señal'}
-            />
+    <div className="min-h-screen bg-green-500 flex flex-col items-center justify-center p-4">
+      <div className="flex-1 flex items-center justify-center w-full">
+        <div className="flex flex-col items-center justify-center">
+          <div className="text-center mb-4">
+            <h1 className="text-2xl font-semibold text-white">Celestis' Cansat</h1>
+            <p className="text-sm text-white/80">{distanceLabel} — {distanceSub}</p>
           </div>
 
-          {/* Distance */}
-          <div>
-            <p className="font-medium text-white leading-none" style={{ fontSize: 56, letterSpacing: -1 }}>
-              {distanceLabel}
-            </p>
-            <p className="text-lg mt-1" style={{ color: 'rgba(255,255,255,0.7)' }}>
-              {distanceSub}
-            </p>
-          </div>
-
-          {/* Bottom info card */}
-          <div
-            className="rounded-2xl p-4 flex flex-col gap-3"
-            style={{ background: 'rgba(0,0,0,0.15)', border: '0.5px solid rgba(255,255,255,0.15)' }}
-          >
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                  Tu posición
-                </p>
-                <p className="text-sm font-mono" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                  {deviceCoords ? `${deviceCoords.lat.toFixed(4)}, ${deviceCoords.lon.toFixed(4)}` : '—'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                  Tracker
-                </p>
-                <p className="text-sm font-mono" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                  {targetCoords ? `${targetCoords.lat.toFixed(4)}, ${targetCoords.lon.toFixed(4)}` : '—'}
-                </p>
-              </div>
-            </div>
-
-            {/* Debug */}
-            <div
-              className="text-xs font-mono leading-relaxed pt-3"
-              style={{ color: 'rgba(255,255,255,0.35)', borderTop: '0.5px solid rgba(255,255,255,0.12)' }}
-            >
-              {fetchDebug}{lastFetchAt ? ` · ${lastFetchAt}` : ''}
-            </div>
-
-            {error && (
-              <p className="text-xs" style={{ color: '#ffb3b3' }}>{error}</p>
-            )}
-
-            {/* iOS compass button */}
-            <button
-              onClick={requestCompassIOS}
-              className="flex items-center gap-2 text-xs w-fit px-3 py-2 rounded-xl transition-colors"
-              style={{
-                background: 'rgba(255,255,255,0.12)',
-                border: '0.5px solid rgba(255,255,255,0.25)',
-                color: 'rgba(255,255,255,0.8)'
-              }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
-              </svg>
-              Activar brújula (iOS)
-            </button>
-          </div>
-        </div>
-
-        {/* ── RIGHT / BOTTOM ARROW PANEL ── */}
-        <div
-          className="flex items-center justify-center p-10 md:w-72"
-          style={{ background: 'rgba(0,0,0,0.1)', borderLeft: '0.5px solid rgba(255,255,255,0.08)' }}
-        >
-          <div
-            style={{
-              transform: `rotate(${arrowRotation}deg)`,
-              transition: 'transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)'
-            }}
-          >
-            <svg width="160" height="160" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <polygon
-                points="90,16 155,148 90,112 25,148"
-                fill="white"
-                opacity="0.95"
-              />
+          <div style={{ transform: `rotate(${arrowRotation}deg)`, transition: 'transform 0.4s ease-out' }}>
+            <svg width="140" height="140" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="90,16 155,148 90,112 25,148" fill="white" opacity="0.98"/>
             </svg>
           </div>
         </div>
-
       </div>
+
+      {/* Bottom info box */}
+      <div className="w-full max-w-2xl p-4 fixed bottom-4 left-1/2 -translate-x-1/2">
+        <div className="bg-white/10 backdrop-blur rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex-1 grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-white/70">Tu posición</p>
+              <p className="text-sm font-mono text-white">{deviceCoords ? `${deviceCoords.lat.toFixed(5)}, ${deviceCoords.lon.toFixed(5)}` : 'Buscando...'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-white/70">Tracker</p>
+              <p className="text-sm font-mono text-white">{targetCoords ? `${targetCoords.lat.toFixed(5)}, ${targetCoords.lon.toFixed(5)}` : 'Buscando...'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowMap(true)}
+              className="px-4 py-2 bg-white text-green-700 rounded-lg font-medium"
+            >Mostrar mapa</button>
+            <button onClick={requestCompassIOS} className="px-3 py-2 bg-white/10 text-white rounded-lg">Brújula</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Map overlay */}
+      {showMap && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
+          <div className="w-[90%] h-[80%] bg-white rounded-lg overflow-hidden relative">
+            <div ref={mapRef} className="w-full h-full" />
+            <button onClick={() => setShowMap(false)} className="absolute top-3 right-3 bg-white/90 text-black px-3 py-1 rounded">Cerrar</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
