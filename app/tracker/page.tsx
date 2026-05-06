@@ -139,6 +139,7 @@ export default function TrackerPage() {
     }
   }
   
+  // Initialize map once when showMap becomes true
   useEffect(() => {
     let cancelled = false
 
@@ -167,8 +168,6 @@ export default function TrackerPage() {
         const centerLon = deviceCoords?.lon ?? targetCoords?.lon ?? 0
         const map = L.map(mapRef.current).setView([centerLat, centerLon], 13)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map)
-        if (deviceCoords) L.marker([deviceCoords.lat, deviceCoords.lon]).addTo(map).bindPopup('Tu ubicación')
-        if (targetCoords) L.marker([targetCoords.lat, targetCoords.lon]).addTo(map).bindPopup('Tracker')
         leafletMapRef.current = map
       }
     }
@@ -177,12 +176,53 @@ export default function TrackerPage() {
 
     return () => {
       cancelled = true
-      if (leafletMapRef.current) {
-        try { leafletMapRef.current.remove() } catch (e) {}
-        leafletMapRef.current = null
+      if (!showMap) {
+        if (leafletMapRef.current) {
+          try { leafletMapRef.current.remove() } catch (e) {}
+          leafletMapRef.current = null
+        }
       }
     }
-  }, [showMap, deviceCoords, targetCoords])
+  }, [showMap])
+
+  // Update markers without recreating map
+  useEffect(() => {
+    if (!leafletMapRef.current || !showMap) return
+
+    const L = (window as any).L
+    const map = leafletMapRef.current
+
+    // Remove all circle markers and markers
+    map.eachLayer((layer: any) => {
+      if ((layer instanceof L.Marker && layer.getPopup()?.getContent() === 'Tracker') ||
+          layer instanceof L.CircleMarker) {
+        map.removeLayer(layer)
+      }
+    })
+
+    // Add updated markers
+    if (deviceCoords) {
+      L.circleMarker([deviceCoords.lat, deviceCoords.lon], {
+        radius: 10,
+        fillColor: '#4285F4',
+        color: '#ffffff',
+        weight: 3,
+        opacity: 1,
+        fillOpacity: 0.9
+      }).addTo(map).bindPopup('Tu ubicación')
+    }
+
+    if (targetCoords) {
+      const redPinSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="#EA4335" d="M16 2C9.4 2 4 7.4 4 14c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12z" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="4" fill="#fff"/></svg>'
+      const redPinIcon = L.icon({
+        iconUrl: 'data:image/svg+xml;base64,' + btoa(redPinSvg),
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+      })
+      L.marker([targetCoords.lat, targetCoords.lon], { icon: redPinIcon }).addTo(map).bindPopup('Tracker')
+    }
+  }, [deviceCoords, targetCoords, showMap])
 
   return (
     <div className="min-h-screen bg-green-500 flex flex-col items-center justify-center p-4">
@@ -230,7 +270,7 @@ export default function TrackerPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
           <div className="w-[90%] h-[80%] bg-white rounded-lg overflow-hidden relative">
             <div ref={mapRef} className="w-full h-full" />
-            <button onClick={() => setShowMap(false)} className="absolute top-3 right-3 bg-white/90 text-black px-3 py-1 rounded">Cerrar</button>
+            <button onClick={() => setShowMap(false)} className="absolute top-4 right-4 z-[9999] bg-white text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-100">Cerrar</button>
           </div>
         </div>
       )}
