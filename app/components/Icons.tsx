@@ -12,6 +12,14 @@ export function MenuIcon({ className = 'w-6 h-6' }: IconProps) {
   )
 }
 
+export function NavigationArrowIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5l7.5 15l-7.5 -3.5l-7.5 3.5Z" />
+    </svg>
+  )
+}
+
 export function XMarkIcon({ className = 'w-6 h-6' }: IconProps) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
