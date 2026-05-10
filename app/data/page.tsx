@@ -36,6 +36,7 @@ interface TelemetryRecord {
   gpsLatitude: number | null
   gpsLongitude: number | null
   gpsConnected: boolean
+  img: string | null
 }
 
 interface ChartPoint {
@@ -328,7 +329,7 @@ function MetricChart({ metric, secondaryMetric, points }: { metric: Metric; seco
   return (
     <div style={{ position: 'relative', width: '100%', height: 280 }}>
       <div 
-        className="flex h-[280px] items-center justify-center text-sm text-ink-muted"
+        className="flex h-70 items-center justify-center text-sm text-ink-muted"
         style={{ display: points.length === 0 ? 'flex' : 'none', position: 'absolute', inset: 0 }}
       >
         Waiting for telemetry data...
@@ -491,6 +492,16 @@ export default function DataPage() {
   )
   const latestGpsPoint = gpsHistory.length > 0 ? gpsHistory[gpsHistory.length - 1] : null
 
+  const latestImage = useMemo<string | null>(
+    () => {
+      const img = [...records].reverse().find((r) => r.img)?.img
+      if (!img) return null
+      // Normalize path separators for Supabase storage URLs
+      return img.replace(/\\/g, '/')
+    },
+    [records]
+  )
+
   const pageNumbers = useMemo(
     () => getPageNumbers(currentPage, totalPages),
     [currentPage, totalPages]
@@ -538,7 +549,7 @@ export default function DataPage() {
               <button
                 key={metric.id}
                 onClick={() => setSelectedMetric(metric.id as MetricId)}
-                className={`flex cursor-pointer flex-shrink-0 items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold shadow-sm transition-all duration-300 ${
+                className={`flex cursor-pointer shrink-0 items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold shadow-sm transition-all duration-300 ${
                   selectedMetric === metric.id
                     ? 'border-accent bg-gray-800 text-white shadow-soft'
                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 hover:shadow-soft'
@@ -619,6 +630,30 @@ export default function DataPage() {
             </div>
           ))}
         </motion.div>
+
+        {latestImage && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mb-8 rounded-2xl border border-line bg-surface-card p-6 shadow-soft md:p-8"
+          >
+            <div className="mb-5">
+              <h2 className="text-xl font-semibold text-ink">Last Image</h2>
+              <p className="text-sm text-ink-muted">
+                Most recent photo captured by the CanSat
+              </p>
+            </div>
+            <div className="flex justify-center">
+              <img
+                src={latestImage}
+                alt="Latest CanSat capture"
+                className="max-h-96 w-auto rounded-xl object-contain shadow-md"
+                loading="lazy"
+              />
+            </div>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}

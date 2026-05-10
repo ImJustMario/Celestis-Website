@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     
     const { data: rows, error } = await supabase
       .from('data')
-      .select('id, timestamp, temperature, co2ppm, altitude, pressure, humidity, gpsAltitude, gpsLatitude, gpsLongitude, gpsConnected')
+      .select('id, timestamp, temperature, co2ppm, altitude, pressure, humidity, gpsAltitude, gpsLatitude, gpsLongitude, gpsConnected, img')
       .order('id', { ascending: false })
       .limit(limit)
 
@@ -51,6 +51,7 @@ export async function GET(request: Request) {
         gpsLatitude: toNumber(row.gpsLatitude),
         gpsLongitude: toNumber(row.gpsLongitude),
         gpsConnected: toBoolean(row.gpsConnected),
+        img: row.img ? row.img.replace(/\\/g, '/') : null
       }))
       .reverse()
 

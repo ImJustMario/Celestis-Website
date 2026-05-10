@@ -17,7 +17,7 @@ function getRequiredEnv(name: string) {
 export function getSupabaseClient() {
   if (!global.__celestisSupabaseClient) {
     const supabaseUrl = getRequiredEnv('NEXT_PUBLIC_SUPABASE_URL')
-    const supabaseKey = getRequiredEnv('SUPABASE_ANON_KEY')
+    const supabaseKey = getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY')
     
     global.__celestisSupabaseClient = createClient(supabaseUrl, supabaseKey)
   }
