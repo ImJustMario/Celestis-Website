@@ -497,7 +497,8 @@ export default function DataPage() {
       const img = [...records].reverse().find((r) => r.img)?.img
       if (!img) return null
       // Normalize path separators for Supabase storage URLs
-      return img.replace(/\\/g, '/')
+      const imgfinal = img.replace(/\\/g, '/').replace("%5C", "/");
+      return imgfinal;
     },
     [records]
   )

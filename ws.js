@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { SerialPort } from "serialport";
 import { ReadlineParser } from "@serialport/parser-readline";
 import { writeFileSync, mkdirSync } from "fs";
-import { join } from "path";
+import readline from "readline";
+import { join, basename, posix } from "path";
 import { Buffer } from "buffer";
 import { inspect } from "util";
 import chalk from "chalk";
@@ -38,9 +39,15 @@ function formatValue(value) {
 
 const dashboardState = {
   serial: {
-    port: process.env.SERIAL_PORT ?? "COM11",
+    port: process.env.SERIAL_PORT ?? "COM15",
     baudRate: Number(process.env.SERIAL_BAUD_RATE ?? 115200),
     status: "starting",
+  },
+  radio: {
+    received: 0,
+    lastRssi: null,
+    lastSnr: null,
+    lastUpdatedAt: "-",
   },
   data: {
     received: 0,
@@ -64,7 +71,9 @@ const dashboardState = {
   lastEvent: "Iniciando consola...",
 };
 
-let dashboardRefreshTimer = null;
+let dashboardRenderTimer = null;
+let dashboardRenderedOnce = false;
+let dashboardLastFrame = "";
 
 const ui = {
   border: chalk.cyan,
@@ -218,8 +227,6 @@ function buildHeader(now, width) {
 }
 
 function renderDashboard() {
-  console.clear();
-
   const width = getLayoutWidth();
   const columnWidth = Math.floor((width - 6) / 2);
   const compact = width < 122;
@@ -233,25 +240,26 @@ function renderDashboard() {
 
   const statusCard = createCard("ESTADO", [
     { label: "Ultimo evento", content: chalk.greenBright(ellipsizeVisible(dashboardState.lastEvent, 34)) },
-    { label: "Refresco", content: dashboardRefreshTimer ? chalk.greenBright("activo") : chalk.redBright("apagado") },
+    { label: "Refresco", content: dashboardRenderTimer ? chalk.greenBright("pendiente") : chalk.greenBright("inmediato") },
+    { label: "RX recibidos", content: chalk.cyanBright(String(dashboardState.radio.received)) },
+    { label: "RSSI / SNR", content: dashboardState.radio.lastRssi !== null && dashboardState.radio.lastSnr !== null ? chalk.whiteBright(`${dashboardState.radio.lastRssi.toFixed(2)} dBm / ${dashboardState.radio.lastSnr.toFixed(2)} dB`) : chalk.gray("sin datos") },
+    { label: "Ultimo RX", content: chalk.whiteBright(dashboardState.radio.lastUpdatedAt) },
   ], columnWidth, "green");
 
   const dataCard = createCard("DATOS", [
     { label: "Recibidos", content: chalk.cyanBright(String(dashboardState.data.received)) },
     { label: "Insertados", content: chalk.greenBright(String(dashboardState.data.inserted)) },
-    { label: "Ultimo tipo", content: chalk.yellowBright(dashboardState.data.lastType) },
     { label: "Ultimo resultado", content: chalk.whiteBright(ellipsizeVisible(dashboardState.data.lastResult, 34)) },
     { label: "Ultimo payload", content: chalk.magentaBright(ellipsizeVisible(dashboardState.data.lastPayload, 34)) },
     { label: "Actualizado", content: chalk.whiteBright(dashboardState.data.lastUpdatedAt) },
-    { label: "Errores", content: dashboardState.data.errors > 0 ? chalk.redBright(String(dashboardState.data.errors)) : chalk.greenBright("0") },
   ], columnWidth, "yellow");
 
   const imageCard = createCard("IMAGENES", [
+    { label: "Estado", content: dashboardState.images.receiving ? chalk.greenBright("Llega una imagen") : chalk.gray("Sin imagen") },
     { label: "Recibidas", content: chalk.cyanBright(String(dashboardState.images.received)) },
     { label: "Procesadas", content: chalk.greenBright(String(dashboardState.images.processed)) },
     { label: "Guardadas", content: chalk.yellowBright(String(dashboardState.images.stored)) },
     { label: "Pendientes", content: dashboardState.images.pending > 0 ? chalk.magentaBright(String(dashboardState.images.pending)) : chalk.greenBright("0") },
-    { label: "Recibiendo", content: dashboardState.images.receiving ? chalk.greenBright("si") : chalk.redBright("no") },
     { label: "Ultimo ID", content: chalk.whiteBright(dashboardState.images.lastId) },
     { label: "Ultimo archivo", content: chalk.whiteBright(ellipsizeVisible(dashboardState.images.lastFile, 34)) },
     { label: "Ultima URL", content: chalk.blueBright(ellipsizeVisible(dashboardState.images.lastUrl, 34)) },
@@ -259,18 +267,46 @@ function renderDashboard() {
 
   const topRow = compact ? [serialCard, statusCard].join("\n\n") : mergeColumns(serialCard, statusCard);
   const bottomRow = compact ? [dataCard, imageCard].join("\n\n") : mergeColumns(dataCard, imageCard);
-  const footer = chalk.gray("Consejo: la consola se refresca sola para mostrar el estado en vivo.");
+  const footer = chalk.gray("Consejo: la consola se actualiza por evento para evitar parpadeos.");
+  const frame = [header, "", topRow, "", bottomRow, "", footer].join("\n");
 
-  console.log([header, "", topRow, "", bottomRow, "", footer].join("\n"));
+  if (frame === dashboardLastFrame) return;
+  dashboardLastFrame = frame;
+
+  if (!process.stdout.isTTY) {
+    console.log(frame);
+    return;
+  }
+
+  if (!dashboardRenderedOnce) {
+    process.stdout.write("\x1b[2J\x1b[H");
+    dashboardRenderedOnce = true;
+  } else {
+    readline.cursorTo(process.stdout, 0, 0);
+    readline.clearScreenDown(process.stdout);
+  }
+
+  process.stdout.write(frame);
+}
+
+function requestDashboardRender() {
+  if (dashboardRenderTimer) return;
+  dashboardRenderTimer = setTimeout(() => {
+    dashboardRenderTimer = null;
+    renderDashboard();
+  }, 50);
 }
 
 function updateDashboard(event, details = {}) {
   if (event) dashboardState.lastEvent = event;
   if (details.serialStatus !== undefined) dashboardState.serial.status = details.serialStatus;
+  if (details.radioReceived) dashboardState.radio.received += details.radioReceived;
+  if (details.lastRssi !== undefined) dashboardState.radio.lastRssi = details.lastRssi;
+  if (details.lastSnr !== undefined) dashboardState.radio.lastSnr = details.lastSnr;
+  if (details.radioUpdatedAt !== undefined) dashboardState.radio.lastUpdatedAt = details.radioUpdatedAt;
   if (details.dataReceived) dashboardState.data.received += details.dataReceived;
   if (details.dataInserted) dashboardState.data.inserted += details.dataInserted;
   if (details.dataErrors) dashboardState.data.errors += details.dataErrors;
-  if (details.lastType !== undefined) dashboardState.data.lastType = details.lastType;
   if (details.lastResult !== undefined) dashboardState.data.lastResult = details.lastResult;
   if (details.lastPayload !== undefined) dashboardState.data.lastPayload = formatValue(details.lastPayload);
   if (details.lastUpdatedAt !== undefined) dashboardState.data.lastUpdatedAt = details.lastUpdatedAt;
@@ -282,17 +318,7 @@ function updateDashboard(event, details = {}) {
   if (details.lastImageFile !== undefined) dashboardState.images.lastFile = details.lastImageFile;
   if (details.lastImageUrl !== undefined) dashboardState.images.lastUrl = details.lastImageUrl;
   if (details.receivingImage !== undefined) dashboardState.images.receiving = details.receivingImage;
-  renderDashboard();
-}
-
-function startDashboardRefresh() {
-  if (dashboardRefreshTimer) return;
-  dashboardRefreshTimer = setInterval(() => {
-    renderDashboard();
-  }, 1000);
-  if (typeof dashboardRefreshTimer.unref === "function") {
-    dashboardRefreshTimer.unref();
-  }
+  requestDashboardRender();
 }
 
 function normalizeTelemetry(payload) {
@@ -309,6 +335,17 @@ function normalizeTelemetry(payload) {
     gpsConnected:  toBoolean(payload.GPS?.S ?? payload.gpsConnected, false),
   };
 }
+
+function parseRadioStatus(line) {
+  const match = line.match(/^\[RX\]\s*RSSI:\s*([-+]?\d+(?:\.\d+)?)\s*\|\s*SNR:\s*([-+]?\d+(?:\.\d+)?)/i);
+  if (!match) return null;
+
+  return {
+    rssi: Number(match[1]),
+    snr: Number(match[2]),
+  };
+}
+
 async function insertTelemetry(supabase, payload) {
   const record = normalizeTelemetry(payload);
 
@@ -316,17 +353,13 @@ async function insertTelemetry(supabase, payload) {
   if (pendingImage.url) {
     record.img = pendingImage.url;
     pendingImage.url = null; // limpiar después de usar
-    updateDashboard("Imagen pendiente asociada a la telemetria", {
-      imagePending: 0,
-      lastImageUrl: record.img,
-    });
+    updateDashboard("Imagen pendiente asociada a la telemetria", { imagePending: 0, lastImageUrl: record.img });
   }
 
-  const { error } = await supabase.from("data_testing").insert(record);
+  const { error } = await supabase.from("data_nacional").insert(record);
   if (error) {
     updateDashboard("Error al insertar telemetria", {
       dataErrors: 1,
-      lastType: "telemetria",
       lastResult: error.message,
       lastPayload: payload,
       lastUpdatedAt: new Date().toLocaleTimeString(),
@@ -336,7 +369,6 @@ async function insertTelemetry(supabase, payload) {
 
   updateDashboard(`Telemetry insertada (${record?.temperature ?? "?"}C, ${record?.co2ppm ?? "?"}ppm)`, {
     dataInserted: 1,
-    lastType: "telemetria",
     lastResult: `Telemetry insertada (${record?.temperature ?? "?"}C, ${record?.co2ppm ?? "?"}ppm)`,
     lastPayload: payload,
     lastUpdatedAt: new Date().toLocaleTimeString(),
@@ -361,9 +393,6 @@ async function handleImageLine(line, supabase) {
     updateDashboard(`Inicio de imagen ${imageState.id}`, {
       imageReceived: 1,
       imagePending: dashboardState.images.pending + 1,
-      lastType: "imagen",
-      lastResult: "Recibiendo base64",
-      lastPayload: line,
       lastImageId: imageState.id,
       receivingImage: true,
       lastUpdatedAt: new Date().toLocaleTimeString(),
@@ -377,7 +406,6 @@ async function handleImageLine(line, supabase) {
     if (!imageState.receiving || imageState.id !== id) {
       updateDashboard(`IMG_END inesperado para ID ${id}`, {
         dataErrors: 1,
-        lastType: "imagen",
         lastResult: "Fin de imagen inesperado",
         lastImageId: id,
         receivingImage: false,
@@ -389,15 +417,15 @@ async function handleImageLine(line, supabase) {
 
     const base64str = imageState.chunks.join("");
     const buffer = Buffer.from(base64str, "base64");
-    const filename = join(IMAGE_DIR, `img_${id}_${Date.now()}.jpg`);
+    const localPath = join(IMAGE_DIR, `img_${id}_${Date.now()}.jpg`);
+    // storage key must use forward slashes and not include local directories
+    const storagePath = basename(localPath).replace(/\\/g, "/");
 
     try {
-      writeFileSync(filename, buffer);
+      writeFileSync(localPath, buffer);
       updateDashboard(`Imagen ${id} guardada`, {
         imageProcessed: 1,
-        lastType: "imagen",
-        lastResult: `Guardada en disco (${buffer.length} bytes)`,
-        lastImageFile: filename,
+        lastImageFile: localPath,
         lastImageId: id,
         lastUpdatedAt: new Date().toLocaleTimeString(),
       });
@@ -405,22 +433,25 @@ async function handleImageLine(line, supabase) {
       // Subir a Supabase Storage si quieres
       const { data, error: uploadError } = await supabase.storage
       .from("images")
-      .upload(filename, buffer, { 
+      .upload(storagePath, buffer, { 
         contentType: "image/jpeg" 
       });
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      // Prefer the path returned by Supabase (it is normalized)
+      const uploadedPath = (data && data.path) ? data.path.replace(/\\/g, "/") : storagePath;
+      const { data: publicData } = supabase.storage
       .from("images")
-      .getPublicUrl(filename);
+      .getPublicUrl(uploadedPath);
+
+      const publicUrl = publicData?.publicUrl ?? null;
 
       pendingImage.url = publicUrl;
       updateDashboard(`Imagen ${id} subida a storage`, {
         imageStored: 1,
         imagePending: Math.max(0, dashboardState.images.pending - 1),
         lastImageUrl: publicUrl,
-        lastResult: "URL publica generada",
         lastUpdatedAt: new Date().toLocaleTimeString(),
       });
     }
@@ -428,7 +459,6 @@ async function handleImageLine(line, supabase) {
     catch (err) {
       updateDashboard(`Error procesando imagen ${id}`, {
         dataErrors: 1,
-        lastType: "imagen",
         lastResult: err.message,
         lastImageId: id,
         lastUpdatedAt: new Date().toLocaleTimeString(),
@@ -438,10 +468,7 @@ async function handleImageLine(line, supabase) {
     imageState.receiving = false;
     imageState.id = null;
     imageState.chunks = [];
-    updateDashboard(`Fin de imagen ${id}`, {
-      receivingImage: false,
-      lastType: "imagen",
-    });
+    updateDashboard(`Fin de imagen ${id}`, { receivingImage: false });
     return;
   }
 
@@ -466,7 +493,6 @@ async function main() {
   const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
 
   renderDashboard();
-  startDashboardRefresh();
 
   port.on("open",  () => updateDashboard(`Puerto serial abierto en ${serialPath}`, { serialStatus: "open" }));
   port.on("error", (err) => updateDashboard(`Error serial: ${err.message}`, { serialStatus: "error", dataErrors: 1 }));
@@ -503,15 +529,24 @@ async function main() {
         continue;
       }
 
+      const radioStatus = parseRadioStatus(trimmed);
+      if (radioStatus) {
+        updateDashboard(`RX recibido RSSI ${radioStatus.rssi.toFixed(2)} | SNR ${radioStatus.snr.toFixed(2)}`, {
+          radioReceived: 1,
+          lastRssi: radioStatus.rssi,
+          lastSnr: radioStatus.snr,
+          radioUpdatedAt: new Date().toLocaleTimeString(),
+          lastUpdatedAt: new Date().toLocaleTimeString(),
+        });
+        continue;
+      }
+
       try {
         const payload = JSON.parse(trimmed);
         await insertTelemetry(supabase, payload);
       } catch {
         updateDashboard("Linea ignorada: no es JSON ni comando de imagen", {
           dataErrors: 1,
-          lastType: "desconocido",
-          lastResult: "Formato no reconocido",
-          lastPayload: trimmed,
           lastUpdatedAt: new Date().toLocaleTimeString(),
         });
       }

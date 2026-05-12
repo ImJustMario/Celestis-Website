@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const supabase = getSupabaseClient()
     
     const { data: rows, error } = await supabase
-      .from('data')
+      .from('data_nacional')
       .select('id, timestamp, temperature, co2ppm, altitude, pressure, humidity, gpsAltitude, gpsLatitude, gpsLongitude, gpsConnected, img')
       .order('id', { ascending: false })
       .limit(limit)
